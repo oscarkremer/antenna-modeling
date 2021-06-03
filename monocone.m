@@ -70,28 +70,15 @@ mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
 CSX = DefineRectGrid( CSX, unit, mesh );
 
 %% create helix using the wire primitive
-CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
+CSX = AddMetal( CSX, 'monocone' ); % create a perfect electric conductor (PEC)
 
-ang = linspace(0,2*pi,21);
-coil_x = Helix.radius*cos(ang);
-coil_y = Helix.radius*sin(ang);
-coil_z = ang/2/pi*Helix.pitch;
+clear p;
+p(1,1) = 0+feed.heigth; p(2,1) = 0;
+p(1,2) = 30+feed.heigth; p(2,2) = 0;
+p(1,3) = 30+feed.heigth; p(2,3) = 30;
+ 
+CSX = AddRotPoly( CSX, 'monocone', 0, 1, p, 2, [0,2*pi]);
 
-helix.x=[];
-helix.y=[];
-helix.z=[];
-zpos = feed.heigth;
-for n=0:Helix.turns-1
-    helix.x = [helix.x coil_x];
-    helix.y = [helix.y coil_y];
-    helix.z = [helix.z coil_z+zpos];
-    zpos = zpos + Helix.pitch;
-end
-clear p
-p(1,:) = helix.x;
-p(2,:) = helix.y;
-p(3,:) = helix.z;
-CSX = AddCurve(CSX, 'helix', 0, p);
 
 %% create ground circular ground
 CSX = AddMetal( CSX, 'gnd' ); % create a perfect electric conductor (PEC)
@@ -101,8 +88,8 @@ stop  = [gnd.radius 2*pi 0];
 CSX = AddBox(CSX,'gnd',10,start,stop,'CoordSystem',1);
 
 %% apply the excitation & resist as a current source
-start = [Helix.radius 0 0];
-stop  = [Helix.radius 0 feed.heigth];
+start = [0 0 0];
+stop  = [0 0 feed.heigth];
 [CSX port] = AddLumpedPort(CSX, 5 ,1 ,feed.R, start, stop, [0 0 1], true);
 
 %%nf2ff calc
