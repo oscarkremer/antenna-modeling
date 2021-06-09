@@ -21,10 +21,16 @@ close all
 %% setup the simulation
 physical_constants;
 unit = 1e-3; % all length in mm
+theta0 = 45*pi/180;
 
-f0 = 2.4e9; % center frequency, frequency of interest!
-lambda0 = round(c0/f0/unit); % wavelength in mm
+Monocone.a = 50;
+Monocone.theta0 = 45*pi/180;
+
+lambda0 = 4*Monocone.a;
+f0 = (3*10^8)/(lambda0*unit);
 fc = 0.5e9; % 20 dB corner frequency
+
+
 
 Helix.radius = 20; % --> diameter is ~ lambda/pi
 Helix.turns = 10;  % --> expected gain is G ~ 4 * 10 = 40 (16dBi)
@@ -35,7 +41,7 @@ gnd.radius = lambda0/2;
 
 % feeding
 feed.heigth = 3;
-feed.R = 120;    %feed impedance
+feed.R = 50;    %feed impedance
 
 % size of the simulation box
 SimBox = [1 1 1.5]*2*lambda0;
@@ -51,7 +57,7 @@ max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh
-mesh.x = SmoothMeshLines([-Helix.radius 0 Helix.radius],Helix.mesh_res);
+mesh.x = SmoothMeshLines([-round(Monocone.a*sin(theta0)) 0 round(Monocone.a*sin(theta0))], Helix.mesh_res);
 % add the air-box
 mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
 % create a smooth mesh between specified fixed mesh lines
@@ -61,9 +67,9 @@ mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth Helix.turns*Helix.pitch+feed.heigth],Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth round(Monocone.a*cos(theta0))+feed.heigth],Helix.mesh_res);
 % add the air-box
-mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2 ]);
+mesh.z = unique([mesh.z -SimBox(3)/10 max(mesh.z)+SimBox(3)/2 ]);
 % create a smooth mesh between specified fixed mesh lines
 mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
 
@@ -74,8 +80,8 @@ CSX = AddMetal( CSX, 'monocone' ); % create a perfect electric conductor (PEC)
 
 clear p;
 p(1,1) = 0+feed.heigth; p(2,1) = 0;
-p(1,2) = 30+feed.heigth; p(2,2) = 0;
-p(1,3) = 30+feed.heigth; p(2,3) = 30;
+p(1,2) = Monocone.a*cos(theta0)+feed.heigth; p(2,2) = 0;
+p(1,3) = Monocone.a*cos(theta0)+feed.heigth; p(2,3) = Monocone.a*sin(theta0);
  
 CSX = AddRotPoly( CSX, 'monocone', 0, 1, p, 2, [0,2*pi]);
 
