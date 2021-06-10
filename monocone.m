@@ -45,7 +45,7 @@ BC = {'PML_8' 'PML_8' 'PML_8' 'PML_8' 'PML_8' 'PML_8'}; % boundary conditions
 FDTD = SetBoundaryCond( FDTD, BC );
 
 %% setup CSXCAD geometry & mesh
-max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
+max_res = floor(c0 / (f0+fc) / unit / 25); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh

@@ -22,7 +22,8 @@ close all
 %% setup the simulation
 physical_constants;
 unit = 1e-3; % all length in mm
-
+Monocone.a = 50;
+Monocone.theta0 = 46.9795*pi/180;
 f0 = 2.5e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
 fc = 1.5e9; % 20 dB corner frequency
@@ -30,16 +31,16 @@ fc = 1.5e9; % 20 dB corner frequency
 Helix.radius = 20; % --> diameter is ~ lambda/pi
 Helix.turns = 10;  % --> expected gain is G ~ 4 * 10 = 40 (16dBi)
 Helix.pitch = 30;  % --> pitch is ~ lambda/4
-Helix.mesh_res = 3;
+Helix.mesh_res = 4;
 
-gnd.radius = lambda0/2;
+gnd.radius = 3*lambda0;
 
 % feeding
-feed.heigth = 3;
-feed.R = 120;    %feed impedance
+feed.heigth = 1;
+feed.R = 50;    %feed impedance
 
 % size of the simulation box
-SimBox = [1 1 1.5]*2*lambda0;
+SimBox = [1 1 1]*2*lambda0;
 
 %% setup FDTD parameter & excitation function
 FDTD = InitFDTD( );
@@ -52,7 +53,7 @@ max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh
-mesh.x = SmoothMeshLines([-Helix.radius 0 Helix.radius],Helix.mesh_res);
+mesh.x = SmoothMeshLines([-2*Monocone.a 0 2*Monocone.a], Helix.mesh_res);
 % add the air-box
 mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
 % create a smooth mesh between specified fixed mesh lines
@@ -62,9 +63,9 @@ mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth Helix.turns*Helix.pitch+feed.heigth],Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth 2*Monocone.a+feed.heigth],Helix.mesh_res);
 % add the air-box
-mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2 ]);
+mesh.z = unique([mesh.z -SimBox(3)/3 max(mesh.z)+SimBox(3)/2 ]);
 % create a smooth mesh between specified fixed mesh lines
 mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
 
@@ -94,9 +95,8 @@ p(2,:) = helix.y;
 p(3,:) = helix.z;
 %CSX = AddCurve(CSX, 'helix', 0, p);
 
-Monocone.width = 1;
-Monocone.theta0 = 30*pi/180;
-Monocone.a = 50;
+
+
 clear p;
 p(1,1) = feed.heigth; p(2,1) = 0;
 p(1,2) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,2) = round(Monocone.a*sin(Monocone.theta0));
@@ -106,21 +106,16 @@ p(1,5) = round(Monocone.a*cos(5*Monocone.theta0/8))+feed.heigth; p(2,5) = round(
 p(1,6) = round(Monocone.a*cos(4*Monocone.theta0/8))+feed.heigth; p(2,6) = round(Monocone.a*sin(4*Monocone.theta0/8));
 p(1,7) = round(Monocone.a*cos(3*Monocone.theta0/8))+feed.heigth; p(2,7) = round(Monocone.a*sin(3*Monocone.theta0/8));
 p(1,8) = round(Monocone.a*cos(2*Monocone.theta0/8))+feed.heigth; p(2,8) = round(Monocone.a*sin(2*Monocone.theta0/8));
-p(1,9) = Monocone.a+feed.heigth; p(2,9) = 0;
-p(1,10) = Monocone.a-Monocone.width+feed.heigth; p(2,10) = 0;
-p(1,11) = round((-2*Monocone.width+Monocone.a)*cos(2*Monocone.theta0/8))+Monocone.width+feed.heigth; p(2,11) = round((-2*Monocone.width+Monocone.a)*sin(2*Monocone.theta0/8));
-p(1,12) = round((-2*Monocone.width+Monocone.a)*cos(3*Monocone.theta0/8))+Monocone.width+feed.heigth; p(2,12) = round((-2*Monocone.width+Monocone.a)*sin(3*Monocone.theta0/8));
-p(1,13) = round((-2*Monocone.width+Monocone.a)*cos(4*Monocone.theta0/8))+Monocone.width+feed.heigth; p(2,13) = round((-2*Monocone.width+Monocone.a)*sin(4*Monocone.theta0/8));
-p(1,14) = round((-2*Monocone.width+Monocone.a)*cos(5*Monocone.theta0/8))+Monocone.width+feed.heigth; p(2,14) = round((-2*Monocone.width+Monocone.a)*sin(5*Monocone.theta0/8));
-p(1,15) = round((-2*Monocone.width+Monocone.a)*cos(6*Monocone.theta0/8))+Monocone.width+feed.heigth; p(2,15) = round((-2*Monocone.width+Monocone.a)*sin(6*Monocone.theta0/8));
-p(1,16) = round((-2*Monocone.width+Monocone.a)*cos(7*Monocone.theta0/8))+Monocone.width+feed.heigth; p(2,16) = round((-2*Monocone.width+Monocone.a)*sin(7*Monocone.theta0/8));
-p(1,17) = round((-2*Monocone.width+Monocone.a)*cos(Monocone.theta0))+Monocone.width+feed.heigth; p(2,17) = round((-2*Monocone.width+Monocone.a)*sin(Monocone.theta0));
-p(1,18) = feed.heigth+Monocone.width; p(2,18) = 0;
+p(1,9) = round(Monocone.a*cos(1*Monocone.theta0/8))+feed.heigth; p(2,9) = round(Monocone.a*sin(1*Monocone.theta0/8));
+p(1,10) = Monocone.a+feed.heigth; p(2,10) = 0;
 
 
 %p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
 
-CSX = AddRotPoly( CSX, 'helix', 1, 1, p, 2, [0,2*pi]);
+CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
+
+
+
 
 
 
@@ -184,6 +179,15 @@ grid on
 title( 'reflection coefficient S_{11}' );
 xlabel( 'frequency f / MHz' );
 ylabel( 'reflection coefficient |S_{11}|' );
+
+% plot reflection coefficient S11
+figure
+plot( freq/1e6, (1+ abs(s11))./(1-abs(s11)), 'k-', 'Linewidth', 2 );
+grid on
+title( 'reflection coefficient S_{11}' );
+xlabel( 'frequency f / MHz' );
+ylabel( 'reflection coefficient |S_{11}|' );
+
 
 drawnow
 
