@@ -24,7 +24,8 @@ physical_constants;
 unit = 1e-3; % all length in mm
 f0 = 2.25e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
-fc = 1.75e9; % 20 dB corner frequency
+%fc = 1.75e9; % 20 dB corner frequency
+fc = 0.25e9; % 20 dB corner frequency
 feed.heigth = 2;
 rf = round(7.5/2);
 Monocone.a = 50;
@@ -67,7 +68,7 @@ max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh
-mesh.x = SmoothMeshLines([-rho_g-rf -Monocone.sphere_radius-rf -(round(Monocone.a*sin(Monocone.theta0))+rf) 0 (rf+round(Monocone.a*sin(Monocone.theta0))) Monocone.sphere_radius+rf rho_g+rf], Helix.mesh_res);
+mesh.x = SmoothMeshLines([-rho_g-rf -Monocone.sphere_radius-rf 0 Monocone.sphere_radius+rf rho_g+rf], Helix.mesh_res);
 % add the air-box
 mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
 % create a smooth mesh between specified fixed mesh lines
@@ -108,8 +109,8 @@ CSX = AddMaterial( CSX, 'lenz' ); % create a perfect electric conductor (PEC)
 
 
 clear p;
-p(1,1) = 0; p(2,1) = 0;
-p(1,2) = feed.heigth; p(2,2) = 0;
+p(1,1) = 0; p(2,1) = 1;
+p(1,2) = feed.heigth; p(2,2) = 1;
 p(1,3) = feed.heigth; p(2,3) = rf;
 p(1,4) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,4) = round(Monocone.a*sin(Monocone.theta0))+rf;
 p(1,5) = z1+feed.heigth; p(2,5) = rho_1+rf;
@@ -124,7 +125,7 @@ p(1,11) = 0; p(2,11) = rho_g+rf;
 CSX = SetMaterialProperty(CSX, 'lenz', 'Epsilon', lenz.epsR, 'Kappa', lenz.kappa);
 
 
-CSX = AddRotPoly( CSX, 'lenz', 1, 'y', p, 'z', [0,2*pi]);
+CSX = AddRotPoly( CSX, 'lenz', 2, 'y', p, 'z', [0,2*pi]);
 
 
 
