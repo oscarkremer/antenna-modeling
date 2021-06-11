@@ -74,41 +74,40 @@ CSX = DefineRectGrid( CSX, unit, mesh );
 %% create helix using the wire primitive
 CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
 
-ang = linspace(0,2*pi,21);
-coil_x = Helix.radius*cos(ang);
-coil_y = Helix.radius*sin(ang);
-coil_z = ang/2/pi*Helix.pitch;
 
-helix.x=[];
-helix.y=[];
-helix.z=[];
-zpos = feed.heigth;
-for n=0:Helix.turns-1
-    helix.x = [helix.x coil_x];
-    helix.y = [helix.y coil_y];
-    helix.z = [helix.z coil_z+zpos];
-    zpos = zpos + Helix.pitch;
-end
-clear p
-p(1,:) = helix.x;
-p(2,:) = helix.y;
-p(3,:) = helix.z;
-%CSX = AddCurve(CSX, 'helix', 0, p);
-
-
-
+rc1 = round(93/2);
+rc2 = round(102/2);
+rc3 = round(108/2);
+rc4 = round(111.4/2);
+rc5 = round(112.5/2);
+rc6 = round(110.7/2);
+rc7 = round(105.2/2);
+rc8 = round(95.38/2);
+rc9 = round(79.55/2);
+rf = round(7.5/2);
+h1 = 43;
+h2 = 54;
+h3 = 63;
+h4 = 76;
+h5 = 87;
+h6 = 97;
+h7 = 107;
+h8 = 117;
+h9 = 127;
+ht = 175;
 clear p;
-p(1,1) = feed.heigth; p(2,1) = 0;
-p(1,2) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,2) = round(Monocone.a*sin(Monocone.theta0));p(1,3) = round(Monocone.a*cos(7*Monocone.theta0/8))+feed.heigth; p(2,3) = round(Monocone.a*sin(7*Monocone.theta0/8));
-p(1,3) = Monocone.a+feed.heigth; p(2,3) = 0;
-
-
-%p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
-
+p(1,1) = feed.heigth; p(2,1) = rf;
+p(1,2) = h1 +feed.heigth; p(2,2) = rc1;
+p(1,3) = h2 +feed.heigth; p(2,3) = rc2;
+p(1,4) = h3 +feed.heigth; p(2,4) = rc3;
+p(1,5) = h4 +feed.heigth; p(2,5) = rc4;
+p(1,6) = h5 +feed.heigth; p(2,6) = rc5;
+p(1,7) = h6 +feed.heigth; p(2,5) = rc6;
+p(1,8) = h7 +feed.heigth; p(2,6) = rc7;
+p(1,9) = h8 +feed.heigth; p(2,5) = rc8;
+p(1,10) = h9 +feed.heigth; p(2,6) = rc9;
+p(1,11) = ht +feed.heigth; p(2,5) = 0;
 CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
-
-
-CSX = AddSphere(CSX, 'helix', 0, [0 0 feed.heigth+Monocone.a/cos(Monocone.theta0)], round(Monocone.a*tan(Monocone.theta0)));
 
 
 

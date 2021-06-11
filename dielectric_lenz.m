@@ -24,9 +24,9 @@ physical_constants;
 unit = 1e-3; % all length in mm
 Monocone.a = 50;
 Monocone.theta0 = 46.9795*pi/180;
-f0 = 2.25e9; % center frequency, frequency of interest!
+f0 = 2.5e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
-fc = 1.75e9; % 20 dB corner frequency
+fc = 1.5e9; % 20 dB corner frequency
 
 Helix.radius = 20; % --> diameter is ~ lambda/pi
 Helix.turns = 10;  % --> expected gain is G ~ 4 * 10 = 40 (16dBi)
@@ -40,7 +40,7 @@ feed.heigth = 1;
 feed.R = 50;    %feed impedance
 
 % size of the simulation box
-SimBox = [1 1 1.5]*2.5*lambda0;
+SimBox = [1 1 1]*2*lambda0;
 
 %% setup FDTD parameter & excitation function
 FDTD = InitFDTD( );
@@ -63,7 +63,7 @@ mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth 3*Monocone.a+feed.heigth],Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth 2*Monocone.a+feed.heigth],Helix.mesh_res);
 % add the air-box
 mesh.z = unique([mesh.z -SimBox(3)/3 max(mesh.z)+2*SimBox(3)/3]);
 % create a smooth mesh between specified fixed mesh lines
@@ -99,18 +99,21 @@ p(3,:) = helix.z;
 
 clear p;
 p(1,1) = feed.heigth; p(2,1) = 0;
-p(1,2) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,2) = round(Monocone.a*sin(Monocone.theta0));p(1,3) = round(Monocone.a*cos(7*Monocone.theta0/8))+feed.heigth; p(2,3) = round(Monocone.a*sin(7*Monocone.theta0/8));
-p(1,3) = Monocone.a+feed.heigth; p(2,3) = 0;
-
-
-%p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
-
+p(1,2) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,2) = round(Monocone.a*sin(Monocone.theta0));
+p(1,3) = round(Monocone.a*cos(7*Monocone.theta0/8))+feed.heigth; p(2,3) = round(Monocone.a*sin(7*Monocone.theta0/8));
+p(1,4) = round(Monocone.a*cos(6*Monocone.theta0/8))+feed.heigth; p(2,4) = round(Monocone.a*sin(6*Monocone.theta0/8));
+p(1,5) = round(Monocone.a*cos(5*Monocone.theta0/8))+feed.heigth; p(2,5) = round(Monocone.a*sin(5*Monocone.theta0/8));
+p(1,6) = round(Monocone.a*cos(4*Monocone.theta0/8))+feed.heigth; p(2,6) = round(Monocone.a*sin(4*Monocone.theta0/8));
+p(1,7) = round(Monocone.a*cos(3*Monocone.theta0/8))+feed.heigth; p(2,7) = round(Monocone.a*sin(3*Monocone.theta0/8));
+p(1,8) = round(Monocone.a*cos(2*Monocone.theta0/8))+feed.heigth; p(2,8) = round(Monocone.a*sin(2*Monocone.theta0/8));
+p(1,9) = round(Monocone.a*cos(1*Monocone.theta0/8))+feed.heigth; p(2,9) = round(Monocone.a*sin(1*Monocone.theta0/8));
+p(1,10) = Monocone.a+feed.heigth; p(2,10) = 0;
 CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
-
-
 CSX = AddSphere(CSX, 'helix', 0, [0 0 feed.heigth+Monocone.a/cos(Monocone.theta0)], round(Monocone.a*tan(Monocone.theta0)));
-
-
+lenz.epsR = 2.1;
+lenz.kappa = 2e-4;
+CSX = AddMateria( CSX, 'dielectric' ); % create a perfect electric conductor (PEC)
+CSX = SetMaterialProperty( CSX, 'dielectric', 'Epsilon', lenz.epsR, 'Kappa', lenz.kappa);
 
 
 %% create ground circular ground
