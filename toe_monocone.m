@@ -22,58 +22,9 @@ close all
 %% setup the simulation
 physical_constants;
 unit = 1e-3; % all length in mm
-Monocone.a = 50;
-Monocone.theta0 = 46.9795*pi/180;
 f0 = 2.25e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
 fc = 1.75e9; % 20 dB corner frequency
-
-Helix.radius = 20; % --> diameter is ~ lambda/pi
-Helix.turns = 10;  % --> expected gain is G ~ 4 * 10 = 40 (16dBi)
-Helix.pitch = 30;  % --> pitch is ~ lambda/4
-Helix.mesh_res = 4;
-
-gnd.radius = 3*lambda0;
-
-% feeding
-feed.heigth = 1;
-feed.R = 50;    %feed impedance
-
-% size of the simulation box
-SimBox = [1 1 1.5]*2.5*lambda0;
-
-%% setup FDTD parameter & excitation function
-FDTD = InitFDTD( );
-FDTD = SetGaussExcite( FDTD, f0, fc );
-BC = {'MUR' 'MUR' 'MUR' 'MUR' 'MUR' 'PML_8'}; % boundary conditions
-FDTD = SetBoundaryCond( FDTD, BC );
-
-%% setup CSXCAD geometry & mesh
-max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
-CSX = InitCSX();
-
-% create helix mesh
-mesh.x = SmoothMeshLines([-2*Monocone.a 0 2*Monocone.a], Helix.mesh_res);
-% add the air-box
-mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
-% create a smooth mesh between specified fixed mesh lines
-mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
-
-% copy x-mesh to y-direction
-mesh.y = mesh.x;
-
-% create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth 3*Monocone.a+feed.heigth],Helix.mesh_res);
-% add the air-box
-mesh.z = unique([mesh.z -SimBox(3)/3 max(mesh.z)+2*SimBox(3)/3]);
-% create a smooth mesh between specified fixed mesh lines
-mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
-
-CSX = DefineRectGrid( CSX, unit, mesh );
-
-%% create helix using the wire primitive
-CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
-
 
 rc1 = round(93/2);
 rc2 = round(102/2);
@@ -95,18 +46,65 @@ h7 = 107;
 h8 = 117;
 h9 = 127;
 ht = 175;
+
+Helix.mesh_res = 3;
+
+gnd.radius = lambda0;
+
+% feeding
+feed.heigth = 3;
+feed.R = 50;    %feed impedance
+
+% size of the simulation box
+SimBox = [1 1 3]*2*lambda0;
+
+%% setup FDTD parameter & excitation function
+FDTD = InitFDTD( );
+FDTD = SetGaussExcite( FDTD, f0, fc );
+BC = {'PML_8' 'PML_8' 'PML_8' 'PML_8' 'PML_8' 'PML_8'}; % boundary conditions
+FDTD = SetBoundaryCond( FDTD, BC );
+
+%% setup CSXCAD geometry & mesh
+max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
+CSX = InitCSX();
+
+% create helix mesh
+mesh.x = SmoothMeshLines([-rc5 -rc4 -rc3 -rc2 -rc1 0 rc1 rc2 rc3 rc4 rc5], Helix.mesh_res);
+% add the air-box
+mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
+% create a smooth mesh between specified fixed mesh lines
+mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
+
+% copy x-mesh to y-direction
+mesh.y = mesh.x;
+
+% create helix mesh in z-direction
+mesh.z = SmoothMeshLines([0 feed.heigth ht+feed.heigth],Helix.mesh_res);
+% add the air-box
+mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2]);
+% create a smooth mesh between specified fixed mesh lines
+mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
+
+CSX = DefineRectGrid( CSX, unit, mesh );
+
+%% create helix using the wire primitive
+CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
+
+
+
 clear p;
-p(1,1) = feed.heigth; p(2,1) = rf;
-p(1,2) = h1 +feed.heigth; p(2,2) = rc1;
-p(1,3) = h2 +feed.heigth; p(2,3) = rc2;
-p(1,4) = h3 +feed.heigth; p(2,4) = rc3;
-p(1,5) = h4 +feed.heigth; p(2,5) = rc4;
-p(1,6) = h5 +feed.heigth; p(2,6) = rc5;
-p(1,7) = h6 +feed.heigth; p(2,5) = rc6;
-p(1,8) = h7 +feed.heigth; p(2,6) = rc7;
-p(1,9) = h8 +feed.heigth; p(2,5) = rc8;
-p(1,10) = h9 +feed.heigth; p(2,6) = rc9;
-p(1,11) = ht +feed.heigth; p(2,5) = 0;
+p(1,1) = feed.heigth; p(2,1) = 0;
+p(1,2) = feed.heigth; p(2,2) = rf;
+p(1,3) = h1 +feed.heigth; p(2,3) = rc1;
+p(1,4) = h2 +feed.heigth; p(2,4) = rc2;
+p(1,5) = h3 +feed.heigth; p(2,5) = rc3;
+p(1,6) = h4 +feed.heigth; p(2,6) = rc4;
+p(1,7) = h5 +feed.heigth; p(2,7) = rc5;
+p(1,8) = h6 +feed.heigth; p(2,8) = rc6;
+p(1,9) = h7 +feed.heigth; p(2,9) = rc7;
+p(1,10) = h8 +feed.heigth; p(2,10) = rc8;
+p(1,11) = h9 +feed.heigth; p(2,11) = rc9;
+p(1,12) = ht +feed.heigth; p(2,12) = 0;
 CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
 
 
@@ -115,9 +113,9 @@ CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
 %% create ground circular ground
 CSX = AddMetal( CSX, 'gnd' ); % create a perfect electric conductor (PEC)
 % add a box using cylindrical coordinates
-start = [0          0    0];
-stop  = [gnd.radius 2*pi 0];
-CSX = AddBox(CSX,'gnd',10,start,stop,'CoordSystem',1);
+start = [-gnd.radius -gnd.radius 0];
+stop  = [gnd.radius gnd.radius 0];
+CSX = AddBox(CSX,'gnd',10,start, stop);
 
 %% apply the excitation & resist as a current source
 start = [0 0 0];
