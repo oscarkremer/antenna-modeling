@@ -25,34 +25,16 @@ unit = 1e-3; % all length in mm
 f0 = 2.25e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
 fc = 1.75e9; % 20 dB corner frequency
+feed.heigth = 2;
 
-rc1 = round(93/2);
-rc2 = round(102/2);
-rc3 = round(108/2);
-rc4 = round(111.4/2);
-rc5 = round(112.5/2);
-rc6 = round(110.7/2);
-rc7 = round(105.2/2);
-rc8 = round(95.38/2);
-rc9 = round(79.55/2);
-rf = round(7.5/2);
-h1 = 43;
-h2 = 54;
-h3 = 63;
-h4 = 76;
-h5 = 87;
-h6 = 97;
-h7 = 107;
-h8 = 117;
-h9 = 127;
-ht = 175;
-
+Monocone.a = 50;
+Monocone.theta0 = 46.9795*pi/180;
 Helix.mesh_res = 4;
-
+Monocone.sphere_radius = round(Monocone.a*tan(Monocone.theta0));
+Monocone.sphere_center = round(Monocone.a/cos(Monocone.theta0))+feed.heigth;
 gnd.radius = 2*lambda0;
 
 % feeding
-feed.heigth = 2;
 feed.R = 50;    %feed impedance
 
 % size of the simulation box
@@ -69,7 +51,7 @@ max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh
-mesh.x = SmoothMeshLines([-rc5 -rc4 -rc3 -rc2 -rc1 0 rc1 rc2 rc3 rc4 rc5], Helix.mesh_res);
+mesh.x = SmoothMeshLines([-Monocone.sphere_radius -round(Monocone.a*sin(Monocone.theta0)) 0 round(Monocone.a*sin(Monocone.theta0)) Monocone.sphere_radius], Helix.mesh_res);
 % add the air-box
 mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
 % create a smooth mesh between specified fixed mesh lines
@@ -79,7 +61,7 @@ mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth h1+feed.heigth h3+feed.heigth h4+feed.heigth h5+feed.heigth h6+feed.heigth h7+feed.heigth h8+feed.heigth h9+feed.heigth ht+feed.heigth], Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth round(Monocone.a*cos(Monocone.theta0))+feed.heigth Monocone.sphere_center Monocone.sphere_center+Monocone.sphere_radius], Helix.mesh_res);
 % add the air-box
 mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2]);
 % create a smooth mesh between specified fixed mesh lines
@@ -91,19 +73,20 @@ CSX = DefineRectGrid( CSX, unit, mesh );
 CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
 
 clear p;
+rf = round(7.5/2);
 p(1,1) = feed.heigth; p(2,1) = 0;
 p(1,2) = feed.heigth; p(2,2) = rf;
-p(1,3) = h1 +feed.heigth; p(2,3) = rc1;
-p(1,4) = h2 +feed.heigth; p(2,4) = rc2;
-p(1,5) = h3 +feed.heigth; p(2,5) = rc3;
-p(1,6) = h4 +feed.heigth; p(2,6) = rc4;
-p(1,7) = h5 +feed.heigth; p(2,7) = rc5;
-p(1,8) = h6 +feed.heigth; p(2,8) = rc6;
-p(1,9) = h7 +feed.heigth; p(2,9) = rc7;
-p(1,10) = h8 +feed.heigth; p(2,10) = rc8;
-p(1,11) = h9 +feed.heigth; p(2,11) = rc9;
-p(1,12) = ht +feed.heigth; p(2,12) = 0;
+p(1,3) = round(Monocone.a*sin(Monocone.theta0))+feed.heigth; p(2,3) = round(Monocone.a*cos(Monocone.theta0))+rf;
+p(1,4) = Monocone.a+feed.heigth; p(2,4) = 0;
+
+
+%p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
+
 CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
+
+
+CSX = AddSphere(CSX, 'helix', 0, [0 0 Monocone.sphere_center], Monocone.sphere_radius);
+
 
 
 
