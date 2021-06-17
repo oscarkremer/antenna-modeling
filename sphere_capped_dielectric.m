@@ -25,6 +25,14 @@ addpath('~/opt/openEMS/share/CTB/matlab'); % circuit toolbox
 post_proc_only = 0;
 
 close all
+px1 = 12.43;
+pz1 = 49.29;
+px2 = 12.63;
+pz2 = 51.43;
+px3 = 12.43;
+pz3 = 53.57;
+px4 = 0;
+pz4 = 64.029;
 
 %% setup the simulation
 physical_constants;
@@ -33,36 +41,32 @@ f0 = 2.25e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
 fc = 1.75e9; % 20 dB corner frequency
 feed.heigth = 2;
-%rf = round(7.5/2);
-rf = 1;
-Monocone.a = 75;
-Monocone.theta0 = 30*pi/180;
-Helix.mesh_res = 2;
-lenz.epsR = 4;
-lenz.kappa = 0;
+rf = round(7.5/2);
+Monocone.a = 50;
+Monocone.theta0 = 10*pi/180;
+Helix.mesh_res = 4;
+Monocone.sphere_radius = round(rf-1+(Monocone.a)*tan(Monocone.theta0));
+Monocone.sphere_center = round((Monocone.a)/cos(Monocone.theta0))+feed.heigth;
+%lenz.epsR = 2.1;
+lenz.epsR = 2.1;
+lenz.kappa = 1.5e-4;
 nr= sqrt(lenz.epsR);
 rho_g = lenz_project(Monocone.a*unit, Monocone.theta0, lenz.epsR)/unit
 diff_rho_a = rho_g - Monocone.a*sin(Monocone.theta0);
 rho_1 = round(Monocone.a*sin(Monocone.theta0) + diff_rho_a/4);
 rho_2 = round(Monocone.a*sin(Monocone.theta0) + 2*diff_rho_a/4);
 rho_3 = round(Monocone.a*sin(Monocone.theta0) + 3*diff_rho_a/4);
-z1 = round(sqrt((nr^2-1)/((nr+1)^2)*rho_g*rho_g - ((rho_1 - (rho_g/(nr+1)))/(nr/(sqrt(nr^2-1))))^2));
-z2 = round(sqrt((nr^2-1)/((nr+1)^2)*rho_g*rho_g - ((rho_2 - (rho_g/(nr+1)))/(nr/(sqrt(nr^2-1))))^2));
-z3 = round(sqrt((nr^2-1)/((nr+1)^2)*rho_g*rho_g - ((rho_3 - (rho_g/(nr+1)))/(nr/(sqrt(nr^2-1))))^2));
-z1 = z1 + feed.heigth;
-z2 = z2 + feed.heigth;
-z3 = z3 + feed.heigth;
-rho_g = rho_g+rf;
-rho_1 = rho_1+rf;
-rho_2 = rho_2+rf;
-rho_3 = rho_3+rf;
-gnd.radius = 400;
+z1 = round(sqrt((nr^2-1)/((nr+1)^2)*rho_g*rho_g - ((rho_1 - (rho_g/(nr+1)))/(nr/(sqrt(nr^2-1))))^2))
+z2 = round(sqrt((nr^2-1)/((nr+1)^2)*rho_g*rho_g - ((rho_2 - (rho_g/(nr+1)))/(nr/(sqrt(nr^2-1))))^2))
+z3 = round(sqrt((nr^2-1)/((nr+1)^2)*rho_g*rho_g - ((rho_3 - (rho_g/(nr+1)))/(nr/(sqrt(nr^2-1))))^2))
+rho_g = round(rho_g);
+gnd.radius = 2*lambda0;
 
 % feeding
-feed.R = 40;    %feed impedance
+feed.R = 50;    %feed impedance
 
 % size of the simulation box
-SimBox = [1.25 1.25 2]*2*lambda0;
+SimBox = [2 2 2]*2*lambda0;
 
 %% setup FDTD parameter & excitation function
 FDTD = InitFDTD( );
@@ -75,7 +79,7 @@ max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh
-mesh.x = SmoothMeshLines([-rho_g -rho_1 -Monocone.a*sin(Monocone.theta0)-rf 0 Monocone.a*sin(Monocone.theta0)+rf rho_1 rho_g], Helix.mesh_res);
+mesh.x = SmoothMeshLines([-rho_g-rf -rho_2-rf -(round(Monocone.a*sin(Monocone.theta0))+rf) 0 (rf+round(Monocone.a*sin(Monocone.theta0))) rho_2-rf rho_g+rf], Helix.mesh_res);
 % add the air-box
 mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
 % create a smooth mesh between specified fixed mesh lines
@@ -87,27 +91,42 @@ mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth z1 Monocone.a*cos(Monocone.theta0)+feed.heigth Monocone.a+feed.heigth], Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth z3 z1 round(Monocone.a*cos(Monocone.theta0))+feed.heigth Monocone.a+feed.heigth], Helix.mesh_res);
 % add the air-box
 mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2]);
+% create a smooth mesh between specified fixed mesh lines
+
 
 mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
 
 CSX = DefineRectGrid( CSX, unit, mesh );
 
+CSX = AddMaterial( CSX, 'lenz' ); % create a perfect electric conductor (PEC)
+
+
+clear p;
+p(1,1) = 0; p(2,1) = rf;
+p(1,2) = feed.heigth; p(2,2) = rf;
+p(1,3) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,3) = round(Monocone.a*sin(Monocone.theta0))+rf;
+p(1,4) = z1+feed.heigth; p(2,4) = rho_1+rf;
+p(1,5) = z2+feed.heigth; p(2,5) = rho_2+rf;
+p(1,6) = z3+feed.heigth; p(2,6) = rho_3+rf;
+p(1,7) = feed.heigth; p(2,7) = rho_g+rf;
+p(1,8) = 0; p(2,8) = rho_g+rf;
+
+CSX = AddRotPoly( CSX, 'lenz', 0, 'y', p, 'z', [0,2*pi]);
+
 %% create helix using the wire primitive
 CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
 
 clear p;
+rf = 7.5/2;
 p(1,1) = feed.heigth; p(2,1) = 0;
 p(1,2) = feed.heigth; p(2,2) = rf;
-p(1,3) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,3) = round(Monocone.a*sin(Monocone.theta0))+rf;
-p(1,4) = round(Monocone.a*cos(4*Monocone.theta0/6))+feed.heigth; p(2,4) = round(Monocone.a*sin(4*Monocone.theta0/6))+rf;
-p(1,5) = round(Monocone.a*cos(3*Monocone.theta0/6))+feed.heigth; p(2,5) = round(Monocone.a*sin(3*Monocone.theta0/6))+rf;
-p(1,6) = round(Monocone.a*cos(2*Monocone.theta0/6))+feed.heigth; p(2,6) = round(Monocone.a*sin(2*Monocone.theta0/6))+rf;
-p(1,7) = round(Monocone.a*cos(1*Monocone.theta0/6))+feed.heigth; p(2,7) = round(Monocone.a*sin(Monocone.theta0/6))+rf;
-p(1,8) = Monocone.a+feed.heigth; p(2,8) = rf;
-p(1,9) = Monocone.a+feed.heigth; p(2,9) = 0;
+p(1,3) = feed.heigth+pz1; p(2,3) = px1;
+p(1,4) = feed.heigth+pz2; p(2,4) = px2;
+p(1,5) = feed.heigth+pz3; p(2,5) = px3;
+p(1,6) = pz4+feed.heigth; p(2,6) = 0;
 
 
 %p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
@@ -118,27 +137,14 @@ CSX = AddRotPoly( CSX, 'helix', 2, 'y', p, 'z', [0,2*pi]);
 %CSX = AddSphere(CSX, 'helix', 2, [0 0 Monocone.sphere_center], Monocone.sphere_radius);
 
 
-CSX = AddMaterial( CSX, 'lenz' ); % create a perfect electric conductor (PEC)
 
-
-clear p;
-p(1,1) = 0; p(2,1) = rf;
-p(1,2) = feed.heigth; p(2,2) = rf;
-p(1,3) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,3) = round(Monocone.a*sin(Monocone.theta0))+rf;
-p(1,4) = z1; p(2,4) = rho_1;
-p(1,5) = z2; p(2,5) = rho_2;
-p(1,6) = z3; p(2,6) = rho_3;
-p(1,7) = feed.heigth; p(2,7) = rho_g;
-p(1,8) = 0; p(2,8) = rho_g;
-
-CSX = AddRotPoly( CSX, 'lenz', 0, 'y', p, 'z', [0,2*pi]);
 CSX = SetMaterialProperty(CSX, 'lenz', 'Epsilon', lenz.epsR, 'Kappa', lenz.kappa);
 
 
 %% create ground circular ground
 CSX = AddMetal( CSX, 'gnd' ); % create a perfect electric conductor (PEC)
 % add a box using cylindrical coordinates
-start = [-gnd.radius -gnd.radius -10];
+start = [-gnd.radius -gnd.radius 0];
 stop  = [gnd.radius gnd.radius 0];
 CSX = AddBox(CSX,'gnd',10,start, stop);
 
@@ -254,5 +260,3 @@ legend('norm','CPRH','CPLH');
 DumpFF2VTK([Sim_Path '/3D_Pattern.vtk'],directivity,thetaRange,phiRange,'scale',1e-3);
 DumpFF2VTK([Sim_Path '/3D_Pattern_CPRH.vtk'],directivity_CPRH,thetaRange,phiRange,'scale',1e-3);
 DumpFF2VTK([Sim_Path '/3D_Pattern_CPLH.vtk'],directivity_CPLH,thetaRange,phiRange,'scale',1e-3);
-
-
