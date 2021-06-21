@@ -1,0 +1,9 @@
+test 1 - antena sem capa esférica, a=5cm e angulo exato de acordo com artigo
+test 2 - antena sem capa esférica, a=5cm e angulo levemente maior (35 graus) que o artigo
+test 3 - 
+test 4 - 
+test 5 - 
+test 6 - 
+test 7 - 
+test 8 - 
+
