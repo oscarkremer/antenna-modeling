@@ -36,7 +36,9 @@ feed.heigth = 2;
 %rf = round(7.5/2);
 rf = 1;
 Monocone.a = 50;
-Monocone.theta0 = 35*pi/180;
+Monocone.theta0 = 33.284*pi/180;
+Monocone.sphere_radius = (rf+Monocone.a*sin(Monocone.theta0))/cos(Monocone.theta0);
+Monocone.sphere_center = Monocone.a*cos(Monocone.theta0)+Monocone.sphere_radius*sin(Monocone.theta0)+feed.heigth;
 Helix.mesh_res = 3;
 lenz.epsR = 2.1;
 lenz.kappa = 0;
@@ -91,7 +93,7 @@ mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth z3 z1 Monocone.a*cos(Monocone.theta0)+feed.heigth Monocone.a+feed.heigth], Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth z3 z1 Monocone.sphere_center+Monocone.sphere_radius], Helix.mesh_res);
 % add the air-box
 mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2]);
 
@@ -119,7 +121,7 @@ p(1,9) = Monocone.a+feed.heigth; p(2,9) = 0;
 CSX = AddRotPoly( CSX, 'helix', 2, 'y', p, 'z', [0,2*pi]);
 
 
-%CSX = AddSphere(CSX, 'helix', 2, [0 0 Monocone.sphere_center], Monocone.sphere_radius);
+CSX = AddSphere(CSX, 'helix', 2, [0 0 Monocone.sphere_center], Monocone.sphere_radius);
 
 
 CSX = AddMaterial( CSX, 'lenz' ); % create a perfect electric conductor (PEC)
