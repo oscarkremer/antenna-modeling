@@ -29,18 +29,22 @@ close all
 %% setup the simulation
 physical_constants;
 unit = 1e-3; % all length in mm
-f0 = 2.25e9; % center frequency, frequency of interest!
+%f0 = 2.25e9; % center frequency, frequency of interest!
+f0 = 1e9;
 lambda0 = round(c0/f0/unit); % wavelength in mm
-fc = 1.75e9; % 20 dB corner frequency
+%fc = 1.75e9; % 20 dB corner frequency
+fc=0.75e9;
 feed.heigth = 2;
 %rf = round(7.5/2);
 rf = 2;
 Monocone.a = 50;
+Monocone.a = 5;
 Monocone.theta0 = 34*pi/180;
 Monocone.sphere_radius = (rf+Monocone.a*sin(Monocone.theta0))/cos(Monocone.theta0)
 Monocone.sphere_center = Monocone.a*cos(Monocone.theta0)+Monocone.sphere_radius*sin(Monocone.theta0)+feed.heigth
-Helix.mesh_res = 3;
-lenz.epsR = 36;
+Helix.mesh_res=1;
+%Helix.mesh_res = 3;
+lenz.epsR = 2.1;
 lenz.kappa = 0;
 nr= sqrt(lenz.epsR);
 rho_g = lenz_project(Monocone.a*unit, Monocone.theta0, lenz.epsR)/unit
@@ -62,14 +66,14 @@ rho_1 = rho_1+rf;
 rho_2 = rho_2+rf;
 rho_3 = rho_3+rf;
 rho_4 = rho_4+rf;
-gnd.radius = 500;
-
+%gnd.radius = 500;
+gnd.radius = 100;
 % feeding
 feed.R = 50;    %feed impedance
 
 % size of the simulation box
-SimBox = [1.8 1.8 2]*2*lambda0;
-
+%SimBox = [1.7 1.7 2]*2*lambda0;
+SimBox = [0.5 0.5 1]*lambda0;
 %% setup FDTD parameter & excitation function
 FDTD = InitFDTD( );
 FDTD = SetGaussExcite( FDTD, f0, fc );
@@ -121,7 +125,7 @@ p(1,12) = Monocone.sphere_center+Monocone.sphere_radius; p(2,12) = 0;
 
 %p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
 
-CSX = AddRotPoly( CSX, 'helix', 2, 'y', p, 'z', [0,2*pi]);
+CSX = AddRotPoly( CSX, 'helix', 3, 'y', p, 'z', [0,2*pi]);
 
 
 CSX = AddMaterial( CSX, 'lenz' ); % create a perfect electric conductor (PEC)
@@ -138,7 +142,7 @@ p(1,7) = z4; p(2,7) = rho_4;
 p(1,8) = feed.heigth; p(2,8) = rho_g;
 p(1,9) = 0; p(2,9) = rho_g;
 
-CSX = AddRotPoly( CSX, 'lenz', 0, 'y', p, 'z', [0,2*pi]);
+CSX = AddRotPoly( CSX, 'lenz', 1, 'y', p, 'z', [0,2*pi]);
 CSX = SetMaterialProperty(CSX, 'lenz', 'Epsilon', lenz.epsR, 'Kappa', lenz.kappa);
 
 
@@ -149,10 +153,13 @@ start = [-gnd.radius -gnd.radius -10];
 stop  = [gnd.radius gnd.radius 0];
 CSX = AddBox(CSX,'gnd',10,start, stop);
 
+CSX = AddDump(CSX, 'Et');
+CSX = AddBox(CSX,'Et', 0, [0,-500,0], [0, 500, 4*lambda0]);
+
 %% apply the excitation & resist as a current source
 start = [0 0 0];
 stop  = [0 0 feed.heigth];
-[CSX port] = AddLumpedPort(CSX, 5 ,1 ,feed.R, start, stop, [0 0 1], true);
+[CSX port] = AddLumpedPort(CSX, 5 ,2 ,feed.R, start, stop, [0 0 1], true);
 
 %%nf2ff calc
 start = [mesh.x(11)      mesh.y(11)     mesh.z(11)];
@@ -234,12 +241,15 @@ plotFF3D(nf2ff,'logscale',-20);
   % plot liear 3D far field
 theta_HPBW = interp1(nf2ff.E_norm{1}(:,1)/max(nf2ff.E_norm{1}(:,1)),thetaRange,1/sqrt(2))*2;
 
+Dlog = 10*log10(nf2ff.Dmax);
+efficiency_log = 10*log10(nf2ff.Prad/P_in_0);
+Gain = Dlog + efficiency_log;
 % display power and directivity
 disp( ['radiated power: Prad = ' num2str(nf2ff.Prad) ' Watt']);
 disp( ['directivity: Dmax = ' num2str(nf2ff.Dmax) ' (' num2str(10*log10(nf2ff.Dmax)) ' dBi)'] );
 disp( ['efficiency: nu_rad = ' num2str(100*nf2ff.Prad./P_in_0) ' %']);
 disp( ['theta_HPBW = ' num2str(theta_HPBW) ' °']);
-
+disp( ['gain = ' Gain]);
 
 %%
 directivity = nf2ff.P_rad{1}/nf2ff.Prad*4*pi;
