@@ -15,6 +15,13 @@ close all
 clear
 clc
 
+
+
+addpath('~/opt/openEMS/share/openEMS/matlab');
+addpath('~/opt/openEMS/share/CSXCAD/matlab');
+addpath('~/opt/openEMS/share/hyp2mat/matlab'); % hyp2mat package
+addpath('~/opt/openEMS/share/CTB/matlab'); % circuit toolbox
+
 post_proc_only = 0;
 
 close all
@@ -22,42 +29,24 @@ close all
 %% setup the simulation
 physical_constants;
 unit = 1e-3; % all length in mm
-f0 = 2.25e9; % center frequency, frequency of interest!
+f0 = 3.25e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
-fc = 1.75e9; % 20 dB corner frequency
-
-rc1 = round(93/2);
-rc2 = round(102/2);
-rc3 = round(108/2);
-rc4 = round(111.4/2);
-rc5 = round(112.5/2);
-rc6 = round(110.7/2);
-rc7 = round(105.2/2);
-rc8 = round(95.38/2);
-rc9 = round(79.55/2);
-rf = round(7.5/2);
-h1 = 43;
-h2 = 54;
-h3 = 63;
-h4 = 76;
-h5 = 87;
-h6 = 97;
-h7 = 107;
-h8 = 117;
-h9 = 127;
-ht = 175;
-
-Helix.mesh_res = 3;
-
-gnd.radius = 2*lambda0;
-
-% feeding
+fc = 2.75e9; % 20 dB corner frequency
 feed.heigth = 2;
+rf = 2;
+Monocone.a = 75;
+Monocone.theta0 = 47*pi/180;
+Monocone.sphere_radius = (rf+Monocone.a*sin(Monocone.theta0))/cos(Monocone.theta0)
+Monocone.sphere_center = Monocone.a*cos(Monocone.theta0)+Monocone.sphere_radius*sin(Monocone.theta0)+feed.heigth
+Helix.mesh_res = 3;
+lenz.epsR = 2.1;
+lenz.kappa = 0;
+nr= sqrt(lenz.epsR);
+gnd.radius = 250;
 feed.R = 50;    %feed impedance
 
 % size of the simulation box
-SimBox = [2 2 2]*2*lambda0;
-
+SimBox = [1.7 1.7 2]*2*lambda0;
 %% setup FDTD parameter & excitation function
 FDTD = InitFDTD( );
 FDTD = SetGaussExcite( FDTD, f0, fc );
@@ -69,20 +58,22 @@ max_res = floor(c0 / (f0+fc) / unit / 20); % cell size: lambda/20
 CSX = InitCSX();
 
 % create helix mesh
-mesh.x = SmoothMeshLines([-rc5 -rc4 -rc3 -rc2 -rc1 0 rc1 rc2 rc3 rc4 rc5], Helix.mesh_res);
+mesh.x = SmoothMeshLines([-Monocone.a-rf 0 Monocone.a+rf], Helix.mesh_res);
 % add the air-box
 mesh.x = [mesh.x -SimBox(1)/2-gnd.radius  SimBox(1)/2+gnd.radius];
 % create a smooth mesh between specified fixed mesh lines
 mesh.x = SmoothMeshLines( mesh.x, max_res, 1.4);
 
 % copy x-mesh to y-direction
+
+
 mesh.y = mesh.x;
 
 % create helix mesh in z-direction
-mesh.z = SmoothMeshLines([0 feed.heigth h1+feed.heigth h3+feed.heigth h4+feed.heigth h5+feed.heigth h6+feed.heigth h7+feed.heigth h8+feed.heigth h9+feed.heigth ht+feed.heigth], Helix.mesh_res);
+mesh.z = SmoothMeshLines([0 feed.heigth Monocone.sphere_center+Monocone.sphere_radius], Helix.mesh_res);
 % add the air-box
 mesh.z = unique([mesh.z -SimBox(3)/2 max(mesh.z)+SimBox(3)/2]);
-% create a smooth mesh between specified fixed mesh lines
+
 mesh.z = SmoothMeshLines( mesh.z, max_res, 1.4 );
 
 CSX = DefineRectGrid( CSX, unit, mesh );
@@ -93,32 +84,36 @@ CSX = AddMetal( CSX, 'helix' ); % create a perfect electric conductor (PEC)
 clear p;
 p(1,1) = feed.heigth; p(2,1) = 0;
 p(1,2) = feed.heigth; p(2,2) = rf;
-p(1,3) = h1 +feed.heigth; p(2,3) = rc1;
-p(1,4) = h2 +feed.heigth; p(2,4) = rc2;
-p(1,5) = h3 +feed.heigth; p(2,5) = rc3;
-p(1,6) = h4 +feed.heigth; p(2,6) = rc4;
-p(1,7) = h5 +feed.heigth; p(2,7) = rc5;
-p(1,8) = h6 +feed.heigth; p(2,8) = rc6;
-p(1,9) = h7 +feed.heigth; p(2,9) = rc7;
-p(1,10) = h8 +feed.heigth; p(2,10) = rc8;
-p(1,11) = h9 +feed.heigth; p(2,11) = rc9;
-p(1,12) = ht +feed.heigth; p(2,12) = 0;
-CSX = AddRotPoly( CSX, 'helix', 0, 'y', p, 'z', [0,2*pi]);
+p(1,3) = round(Monocone.a*cos(Monocone.theta0))+feed.heigth; p(2,3) = round(Monocone.a*sin(Monocone.theta0))+rf;
+p(1,4) = Monocone.sphere_radius*sin(-Monocone.theta0+(5*pi/180)) + Monocone.sphere_center; p(2,4) = Monocone.sphere_radius*cos(-Monocone.theta0+(5*pi/180));
+p(1,5) = Monocone.sphere_radius*sin(-Monocone.theta0+(15*pi/180)) + Monocone.sphere_center; p(2,5) = Monocone.sphere_radius*cos(-Monocone.theta0+(15*pi/180));
+p(1,6) = Monocone.sphere_center; p(2,6) = Monocone.sphere_radius;
+p(1,7) = Monocone.sphere_radius*sin(10*pi/180) + Monocone.sphere_center; p(2,7) = Monocone.sphere_radius*cos(10*pi/180);
+p(1,8) = Monocone.sphere_radius*sin(30*pi/180) + Monocone.sphere_center; p(2,8) = Monocone.sphere_radius*cos(30*pi/180);
+p(1,9) = Monocone.sphere_radius*sin(45*pi/180) + Monocone.sphere_center; p(2,9) = Monocone.sphere_radius*cos(45*pi/180);
+p(1,10) = Monocone.sphere_radius*sin(60*pi/180) + Monocone.sphere_center; p(2,10) = Monocone.sphere_radius*cos(60*pi/180);
+p(1,11) = Monocone.sphere_radius*sin(80*pi/180) + Monocone.sphere_center; p(2,11) = Monocone.sphere_radius*cos(80*pi/180);
+p(1,12) = Monocone.sphere_center+Monocone.sphere_radius; p(2,12) = 0;
 
 
+%p(1,3) = round(Monocone.a*cos(Monocone.theta0)); p(2,3) = 0
 
+CSX = AddRotPoly( CSX, 'helix', 3, 'y', p, 'z', [0,2*pi]);
 
 %% create ground circular ground
 CSX = AddMetal( CSX, 'gnd' ); % create a perfect electric conductor (PEC)
 % add a box using cylindrical coordinates
-start = [-gnd.radius -gnd.radius 0];
+start = [-gnd.radius -gnd.radius -10];
 stop  = [gnd.radius gnd.radius 0];
 CSX = AddBox(CSX,'gnd',10,start, stop);
+
+%CSX = AddDump(CSX, 'Et');
+%CSX = AddBox(CSX,'Et', 0, [0,-500,0], [0, 500, 4*lambda0]);
 
 %% apply the excitation & resist as a current source
 start = [0 0 0];
 stop  = [0 0 feed.heigth];
-[CSX port] = AddLumpedPort(CSX, 5 ,1 ,feed.R, start, stop, [0 0 1], true);
+[CSX port] = AddLumpedPort(CSX, 5 ,2 ,feed.R, start, stop, [0 0 1], true);
 
 %%nf2ff calc
 start = [mesh.x(11)      mesh.y(11)     mesh.z(11)];
@@ -173,14 +168,14 @@ ylabel( 'reflection coefficient |S_{11}|' );
 figure
 plot( freq/1e6, (1+ abs(s11))./(1-abs(s11)), 'k-', 'Linewidth', 2 );
 grid on
-title( 'reflection coefficient S_{11}' );
+title( 'VSWR' );
 xlabel( 'frequency f / MHz' );
 ylabel( 'reflection coefficient |S_{11}|' );
 xlim ([500 4000])
 ylim ([0 3])
 
 drawnow
-
+save('antenna_75_with.mat')
 %% NFFF contour plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %find resonance frequncy from s11
 f_res = f0;
@@ -195,15 +190,20 @@ disp( 'calculating the 3D far field...' );
 
 nf2ff = CalcNF2FF(nf2ff, Sim_Path, f_res, thetaRange*pi/180, phiRange*pi/180,'Mode',0,'Outfile','3D_Pattern.h5','Verbose',1);
 figure
-plotFF3D(nf2ff);        % plot liear 3D far field
+plotFF3D(nf2ff,'logscale',-20);
+
+  % plot liear 3D far field
 theta_HPBW = interp1(nf2ff.E_norm{1}(:,1)/max(nf2ff.E_norm{1}(:,1)),thetaRange,1/sqrt(2))*2;
 
+Dlog = 10*log10(nf2ff.Dmax);
+efficiency_log = 10*log10(nf2ff.Prad/P_in_0);
+Gain = Dlog + efficiency_log;
 % display power and directivity
 disp( ['radiated power: Prad = ' num2str(nf2ff.Prad) ' Watt']);
 disp( ['directivity: Dmax = ' num2str(nf2ff.Dmax) ' (' num2str(10*log10(nf2ff.Dmax)) ' dBi)'] );
 disp( ['efficiency: nu_rad = ' num2str(100*nf2ff.Prad./P_in_0) ' %']);
 disp( ['theta_HPBW = ' num2str(theta_HPBW) ' °']);
-
+disp( ['gain = ' Gain]);
 
 %%
 directivity = nf2ff.P_rad{1}/nf2ff.Prad*4*pi;
@@ -226,7 +226,8 @@ DumpFF2VTK([Sim_Path '/3D_Pattern.vtk'],directivity,thetaRange,phiRange,'scale',
 DumpFF2VTK([Sim_Path '/3D_Pattern_CPRH.vtk'],directivity_CPRH,thetaRange,phiRange,'scale',1e-3);
 DumpFF2VTK([Sim_Path '/3D_Pattern_CPLH.vtk'],directivity_CPLH,thetaRange,phiRange,'scale',1e-3);
 
+
 csv_array = [freq'/1e9 real(Zin)' imag(Zin)' ((1+ abs(s11))./(1-abs(s11)))'];
-csvwrite('mcem_75_34.csv', csv_array);
+csvwrite('mcem_75_47.csv', csv_array);
 csv_array = [thetaRange' 10*log10(directivity(:,1))];
-csvwrite('mcem_75_34_directivity.csv', csv_array);
+csvwrite('mcem_75_47_directivity.csv', csv_array);

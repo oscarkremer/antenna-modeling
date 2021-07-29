@@ -29,16 +29,13 @@ close all
 %% setup the simulation
 physical_constants;
 unit = 1e-3; % all length in mm
-%f0 = 2.25e9; % center frequency, frequency of interest!
-f0 = 1e9;
+f0 = 2.25e9; % center frequency, frequency of interest!
 lambda0 = round(c0/f0/unit); % wavelength in mm
-%fc = 1.75e9; % 20 dB corner frequency
-fc=0.75e9;
+fc = 1.75e9; % 20 dB corner frequency
 feed.heigth = 2;
 %rf = round(7.5/2);
 rf = 2;
 Monocone.a = 50;
-Monocone.a = 5;
 Monocone.theta0 = 34*pi/180;
 Monocone.sphere_radius = (rf+Monocone.a*sin(Monocone.theta0))/cos(Monocone.theta0)
 Monocone.sphere_center = Monocone.a*cos(Monocone.theta0)+Monocone.sphere_radius*sin(Monocone.theta0)+feed.heigth
@@ -66,14 +63,13 @@ rho_1 = rho_1+rf;
 rho_2 = rho_2+rf;
 rho_3 = rho_3+rf;
 rho_4 = rho_4+rf;
-%gnd.radius = 500;
-gnd.radius = 100;
+gnd.radius = 500;
 % feeding
 feed.R = 50;    %feed impedance
 
 % size of the simulation box
-%SimBox = [1.7 1.7 2]*2*lambda0;
-SimBox = [0.5 0.5 1]*lambda0;
+SimBox = [1.7 1.7 2]*2*lambda0;
+#SimBox = [0.5 0.5 1]*lambda0;
 %% setup FDTD parameter & excitation function
 FDTD = InitFDTD( );
 FDTD = SetGaussExcite( FDTD, f0, fc );
@@ -271,3 +267,7 @@ legend('norm','CPRH','CPLH');
 DumpFF2VTK([Sim_Path '/3D_Pattern.vtk'],directivity,thetaRange,phiRange,'scale',1e-3);
 DumpFF2VTK([Sim_Path '/3D_Pattern_CPRH.vtk'],directivity_CPRH,thetaRange,phiRange,'scale',1e-3);
 DumpFF2VTK([Sim_Path '/3D_Pattern_CPLH.vtk'],directivity_CPLH,thetaRange,phiRange,'scale',1e-3);
+csv_array = [freq'/1e9 real(Zin)' imag(Zin)' ((1+ abs(s11))./(1-abs(s11)))'];
+csvwrite('mce_75_49.csv', csv_array);
+csv_array = [thetaRange' 10*log10(directivity(:,1))];
+csvwrite('mce_75_49_directivity.csv', csv_array);
